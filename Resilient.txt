@@ -1,0 +1,258 @@
+				#Resilient application#
+# Build an infrastructure by using infrastructure as a code
+
+/*VPC*/
+provider "aws" {
+region = " us-east-1"
+ }
+resource "aws_vpc" "my_vpc" {
+  cidr_block       = "10.40.0.0/16"
+  tags = {
+    Name = " (VPC name) "
+  }
+}
+
+/*IGW*/
+
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = "${aws_vpc.my_vpc.id}"
+tags = {
+    Name = "(IG name)"
+  }
+}
+}
+
+/*IGW*/
+
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = "${aws_vpc.my_vpc.id}"
+tags = {
+    Name = "(IG name)"
+  }
+}
+/*ROUTE TABLE*/
+
+resource "aws_route_table" "my_route" {
+
+  vpc_id = "${aws_vpc.my_vpc.id}"
+ route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.my_igw.id}"
+  }
+  tags = {
+
+    Name = "(route table name)"
+
+  }
+
+}
+
+/*subnet*/
+
+resource "aws_subnet" "my_sub" {
+  vpc_id     = "${aws_vpc.my_vpc.id}"
+  cidr_block = "10.40.10.0/24"
+tags = {
+    Name = "(subnet name)"
+  }
+}
+/*subnet association*/
+resource "aws_route_table_association" "my_route_association" {
+  subnet_id      = "${aws_subnet.my_sub.id}"
+  route_table_id = "${aws_route_table.my_route.id}"
+}
+
+/*security group*/
+
+resource "aws_security_group" "my_sg" {
+
+  name        = "${var.sg_name}"
+
+  description = "allow all traffic"
+
+  vpc_id      = "${aws_vpc.my_vpc.id}"
+
+  ingress {
+  
+    description = "TLS from VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.00/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "(SG name)"
+  }
+}
+provider "aws" {
+
+
+/*ROUTE TABLE*/
+
+resource "aws_route_table" "my_route" {
+  vpc_id = "${aws_vpc.my_vpc.id}"
+ route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.my_igw.id}"
+  }
+  tags = {
+    Name = "(route table name)"
+  }
+}
+
+/*subnet*/
+
+resource "aws_subnet" "my_sub" {
+  vpc_id     = "${aws_vpc.my_vpc.id}"
+  cidr_block = "10.40.10.0/24"
+tags = {
+    Name = "(subnet name)"
+  }
+}
+
+/*subnet association*/
+resource "aws_route_table_association" "my_route_association" {
+  subnet_id      = "${aws_subnet.my_sub.id}"
+  route_table_id = "${aws_route_table.my_route.id}"
+}
+
+/*security group*/
+
+resource "aws_security_group" "my_sg" {
+  name        = "${var.sg_name}"
+  description = "allow all traffic"
+  vpc_id      = "${aws_vpc.my_vpc.id}"
+
+  ingress {
+    description = "TLS from VPC"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.00/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "(SG name)"
+  }
+}
+
+
+provider "aws" {
+region = "us-east-1"
+}
+resource "aws_instance" "my_ec2" {
+count = 3
+  ami           = "ami-0947d2ba12ee1ff75"
+  instance_type = "t2.micro"
+  key_name   = "resilient key"
+  vpc_id = "aws_vpc.my_vpc.id"
+  tags = {
+    Name = "Relilient server"
+  }
+}
+/* autoscaling creation */
+resource "aws_launch_configuration" "asg-config" {
+  image_id = "${var.image_id}"
+  instance_type = "${var.instance_type}"
+  security_groups = ["${aws_security_group.asg-sg.id}"]
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+data "aws_availability_zones" "all" {}
+resource "aws_autoscaling_group" "test-asg" {
+  launch_configuration    = "${aws_launch_configuration.asg-config.id}"
+  availability_zones      = ["${data.aws_availability_zones.all.names}"]
+  target_group_arns       = ["${var.target_group_arn}"]
+  health_check_type       = "ELB"
+  min_size                = "1"
+  max_size                = "2"
+  tag {
+    key = "Name"
+    propagate_at_launch = true
+    value = "my-terraform-asg-example"
+  }
+}
+
+
+# instructions:- 
+#	Build a servers infrastructure as a code (terraform)
+#	Logged into the server by using SSH port 22  and install the ansible package to configure the infrastructure 
+# configured the internal communication among the three servers by passing the Private IPv4 in a file called /etc/hosts .
+#	Configured the password less authentication by passing private key.
+#	Installed the httpd in master server (yum install httpd -y)
+# Allowed the port httpd in security group. 
+# Going to stress on the server (stress --vm 2)  based upon the load,  the servers will be scaling up and down.
+#	Properly configured the launch configuration and autoscaling to scale up and down based on the load.
+#	We are going to configure the cloudwatch to monitor the CPU utilization and memory consumption.
+
+#installing a httpd server by using ansible code:- 
+
+---
+- name: installing and configuring apache in linux server
+  hosts: resilient application
+  tasks:
+     - name: gathering public ipaddress
+        command: url=http://54.163.92.72/latest/meta-data/public-ipv4
+         register: myoutput
+
+      - set_fact: myip="{{myoutput.stdout}}"
+      - name: installing apache package
+         yum:
+            name: httpd
+             state: present
+
+    - name: enabling apache
+       systemcd:
+           name: httpd
+           state: present
+
+     - name: restart apache
+        systemmd: name=httpd state=restarted
+
+      - name: copying index.html file
+        template: src=index.html dest=/var/www/html/index.html
+      
+      - name: modify httpd.conf fiel
+         replace: 
+            path: /etc/httpd/conf/httpd.conf
+            regexp: '^#ServerName www.example.com'
+            replace:  'ServerName {{ipaddress}}'
+            notify: restart apache
+
+    handlers: 
+        - name: restart apache
+           systemd: name=httpd state=restarted
+
+# CI & CD with Jenkins
+#	Before run the Jenkins have to install the java package, since Jenkins is purely developed by java.
+#	yum install java-1.8.0-openjdk-devel -y
+#	install the Jenkins repository 
+#	wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+#          import the jenkins key (rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key)
+#          install jenkins (yum install jenkins -y)
+#         systemctl restart jenkins
+	systemctl enable jenkins
+#          intall the git package (yum install git -y)
+#         select the maven project to build the package (install maven plugin)
+#       have to clone the repository for contineous integration
+#       configure the settings in github for communicating with the jenkins(http://54.163.92.72/github-webhook/)
+#       going to create a key based authentication in jenkins for CD in ansible.
+#        if any changes are happen, CI job will be triggered.
+#      after CD job it will be creating the jar file and deploying in the server.
+
