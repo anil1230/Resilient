@@ -1,4 +1,4 @@
-				#Resilient application#
+				##Resilient application##
 # Build an infrastructure by using infrastructure as a code
 
 /*VPC*/
