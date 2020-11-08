@@ -252,6 +252,6 @@ resource "aws_autoscaling_group" "test-asg" {
 #         select the maven project to build the package (install maven plugin)
 #       have to clone the repository for contineous integration
 #       configure the settings in github for communicating with the jenkins(http://54.163.92.72/github-webhook/)
-#       going to create a key based authentication in jenkins for CD in ansible.
+#       going to create a password based authentication in jenkins for CD to the ansible server.
 #        if any changes are happen, CI job will be triggered.
 #      after CD job it will be creating the jar file and deploying in the server.
