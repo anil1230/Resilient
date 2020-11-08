@@ -255,4 +255,3 @@ resource "aws_autoscaling_group" "test-asg" {
 #       going to create a key based authentication in jenkins for CD in ansible.
 #        if any changes are happen, CI job will be triggered.
 #      after CD job it will be creating the jar file and deploying in the server.
-
